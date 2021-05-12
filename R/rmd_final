@@ -1,0 +1,296 @@
+---
+title: "COVID's Potential Impact on Migration from California to Montana"
+author: "Ben Carlton"
+date: "5/12/2021"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(rdrobust)
+library(rdd)
+library(rddensity)
+library(jtools)
+library(readxl)
+library(ggplot2)
+library(stargazer)
+library(stringr)
+
+Montana <- read.csv("https://raw.githubusercontent.com/benjcarlton/Causal_Project/main/Data/Dataset%20for%20Causal6.csv")
+
+interaction <- Montana$usimm*Montana$permits
+x <- Montana$m
+y <- Montana$ahv
+home <- log10(Montana$sdiff)
+home1 <- log10(Montana$bdiff)
+
+```
+
+# Abstract
+
+The purpose of this paper is to explore whether or not the COVID lockdowns have impacted the net immigration from California to Montana. This analysis is performed using a combination of supply and demand factors related to the willingness to move from one state to another in tandem with COVID related factors. Regression discontinuity is utilized to examine the trends prior to the lockdown in California starting in March 2020 and those which have followed. My findings suggest that there is some evidence that the lockdown in California may have increased the number of net immigrants from California to Montana. These findings are inconclusive however due to insufficient data and discontinuity in several variables within the model.   
+
+# Background
+
+COVID 19 has brought on many changes in how people in the United States function on a daily basis. From lockdown and social distancing policies encouraging remote work over in-person work to altered social interactions, many Americans have modified their lifestyle choices. As noted by several news outlets and migration data, Montana has a steady net immigration from California that tops 30% annually. Since 2018 the state of Montana has seen a rise in both total net immigration from other states as well as an increase in the percentage of net immigrants from California (See Reference 1). The purpose of this paper is to explore if sustained lockdowns have had an impact in incentivizing Californians to expedite the transition to rural areas by examining the impact of relevant factors related to migration to Montana. 
+
+# Methodology
+
+Using the time frame of January 1st 2017 to March 1st 2021 I examine the impact of relevant factors related to moving from a one state to another in the United States, and factor in the COVID lockdown in California. Specifically, I examine those factors that could impact the likelihood of moving from Californian to the state of Montana in tandem with the COVID cases and the presence of the lockdown in California. Looking at the baseline model, I will look to use RDD estimation with a cutoff of March 2020 (Month 39) and examine the trend prior to governor Gevin Newsom's announcement of COVID lockdowns and the trend that has occurred since. In order to do this, I will examine the control covariates at and around month 39 to see if there are any other factors within the model whose sudden change could impact the number of net migrants from California to Montana. Using RDD, will look to examine any differentials in the trend, specifically looking for whether the trendline is continuous at month 39 or not. 
+
+# Variables
+
+### Outcome Variable
+
+caimm - The number of net immigrants from California to Montana in a given month. This was found through tax filings and DMV records for the state of Montana.
+
+### Demand Side Factors
+
+s_h_ratio - The ratio of the average price of a home sale in Montana for a given month divided by the average home sale price in California for the same month. Data gathered from Zillow's average house sale price. (See references 5 & 6) 
+
+gas_r - The ratio of the average price of a gallon of gasoline in California divided by the average price of a gallon of gasoline in the state of Montana during the same period. (Reference 9)
+
+mort - The average interest rate of a 30-year mortgage in the United States for a given month. Data used from St. Louis Fed (Reference 13)
+
+ahv - The average home sale price in the state of Montana for a given month. Found using Zillow housing sales data. (See Reference 5)
+
+### Supply Side Factors
+
+permits - The number of private home housing permits filed in a given month in the state of Montana. Found using the permit office for the State of Montana. (See Reference 10)
+
+dlumber - The change in lumber futures for 1,000 pounds of construction grade lumber used for construction in a given month. (See Reference 7 for link to historical prices)
+
+### General Factors
+
+temp - Average monthly temperature in the state of Montana. Taken from Montana State University's geological database. (See Reference 3)
+
+percip - Average monthly precipitation in the state of Montana measured in inches. This includes both rain and snow. Also sourced from Montana State University (Reference 4)
+
+cacovid - Total number of COVID positive cases in the state of California. Taken from Worldinfometers COVID tracker. (Reference 14)
+
+### Covariate of Interest
+
+calockdown - Dummy variable corresponding to 1 for active lockdown in California. Taken from the CA governor's office. (Reference 2)
+
+## Logic Behind Selected Covariates
+
+There are many factors surrounding the decision to move from a larger state to a smaller one. Many of these are centered around: 
+
+1. Cost of living: wages, fuel expenses, housing prices (and by extension mortgage/rent payments);
+
+2. Similarity in locations, namely weather patterns; and
+
+3. Quality of life factors like the ability to access to shops, tourist sites, and "what a place has to offer"
+
+The base model specific to to net immigration from California includes the average home sale price in Montana (ahv), the ratio of the average home sale price in Montana and the average home sale price in California (s_h_ratio), the ratio of minimum wage in California compared to the minimum wage in Montana (wage_r), the ratio of the average price of a gallon of gas between the two states (gas_r), and the total number of confirmed COVID cases in California at the first of a given month (cacovid). 
+
+The control factors in my model are the price of lumber futures (dlumber), the average 30-year fixed mortgage rate (mort), the number of private home permits issued in Montana for a given month (permits), the temperature for a given month (temp), and the average monthly percipitation in the state of Montana for a given month (percip), 
+
+# General Model
+
+caimm = intercept + ahv + dlumber + permits + s_h_ratio + wage_r + gas_r + mort + temp + percip + calockdown + cacovid
+
+## California Immigrants 2017 to Now
+
+Looking at the average number of net immigrants from California to Montana spanning from Jan 2017 to March 2021:
+
+```{r cars, echo=FALSE}
+ggplot( data = Montana, aes( month, caimm), c = 39) + geom_line()
+```
+
+As shown above, there has been a steady increase in the number of Californians moving to Montana in recent months. This is the primary motivating factor in this paper's interest in exploring the factors surrounding this increase.
+
+## Running the Model Using Linear Regression 
+```{r reg, echo=FALSE}
+baseline <- lm(caimm ~ ahv + dlumber + permits + s_h_ratio + gas_r + mort + temp + percip + calockdown + cacovid, data = Montana)
+
+stargazer(baseline,
+  title="Covariates Forecasted Effect on Immigrants From California",
+  notes.label="Significance Levels",
+  type = "text"
+  )
+```
+
+The model above is not complete, but with an "R-squared" of .898 it will be useful for the analysis. What is interesting about the above results is that the factors most significant to the number of net immigrants from California are those related to housing prices, the temperature, and the California lockdown. 
+
+One could speculate that the housing factors are related to the fear of missing out similar to surges in willingness to buy assets that are appreciating in value. That is, that people who were considering the move to Montana before see increasing house prices as an indicator of future growth and the fact that others are moving to the state is a reaffirmation of those beliefs.
+
+The significance of temperature is more straightforward. The weather difference between California and Montana is extreme with few populated areas in California experience sub-40 degree temperatures. Migration and leisure patterns to Montana reflect this trend. In the spring and summer months, more immigrants come to Montana than during the winter months, so the regression results showing a positive correlation between temperature and California immigrants as significant is not surprising,
+
+The third factor which is the one of interest is the cutoff value (calockdown) being positive. To explore if this is coincidental or if RDD can help explore this result, the balance of the covariates at and around the cutoff point must be examined.
+
+# Checking the Covariate Balances
+
+To explore if the lockdowns in California can be used as an explanation for the spike in net immigration to Montana from California, it must the case that no other relevant covariates experienced spikes around the cutoff period (month 39). I will look to do this through a combination of regressing each covariate on the rest of the model and utilizing "rdplot" to look for discontinuity at the cutoff point.
+
+### Housing Related Covariates
+
+Regressing the housing variables (and by extension the leading supply indicators) on the baseline model shows the following:
+
+```{r model1, echo=FALSE}
+modela <- lm(dlumber ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+modeld <- lm(permits ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+stargazer(modela, modeld,
+  title="Covariate Balance",
+  dep.var.caption ="Change in Lumber Futures, Private Permits Issued",
+  notes.label="Significance Levels",
+  type = "text"
+  )
+```
+
+Looking specifically at "calockdown" there is no meaningful level of statistical significance for "calockdown" on either the price of lumber futures nor the number of permits issued in the state of Montana. It is important to note that the number of net immigrants from California is stastically significant to the number of housing permits issued at a 90% confidence level, which is consistent with the idea that more people are moving to Montana.
+
+### Weather Covariates
+
+While Montana has a fairly predictable temperature cycle, and fairly consistent average precipitation rate for any given month, the significance of these factors must still be analyzed. Checking to ensure that this assumption bears out in the findings, both temperature and monthly precipitation are regressed against the model, as shown below:
+
+```{r model2, echo=FALSE}
+modelb <- lm(temp ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+modelc <- lm(percip ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+stargazer(modelb, modelc,
+  title="Covariate Balance",
+  dep.var.caption ="Average Temperature, Average Precipitation",
+  notes.label="Significance Levels",
+  type = "text"
+  )
+```
+
+Looking specifically at "calockdown", there is no statistical significance at any meaningful level which is to be expected as governors' mandates do affect the temperature or how much rain is likely to fall.
+
+## Checking the Balance of the Model Covariates
+
+Looking at the other covariates aside from "calockdown", their impact and potential for endogeniety cannot be ignored so a similar analysis must be performed on the baseline model.
+
+### Average House Price
+
+Looking at trend in the average sale price of a home in the state of Montana:
+
+```{r cars12, echo=FALSE}
+rdplot(Montana$ahv, Montana$month, p = 3, c = 39, y.label = 'Average Home Sale Price in Montana',  x.label = 'Month', kernel = "triangular")
+```
+
+It can be seen above that while there has been a steady increase in the housing price in Montana, there is no specific jump around the cutoff period, leading to the belief that the influx of Californian immigrants is not fueled by a surge in housing prices. It is interesting to note that, due to the law of demand one would expect to see a decrease in people from higher cost of living states to Montana as higher housing prices are experienced.
+
+### Mortgage Rate
+
+```{r cars9, echo=FALSE}
+rdplot(Montana$mort, Montana$month, p = 6, c = 39, y.label = 'Average US 30-Year Mortgage Rate',  x.label = 'Month', kernel = "triangular")
+```
+
+Looking at the trend it is evident that there is discontinuity at the cutoff. Noting the "y-axis values" however the differential is less than 0.1% which is unlikely to explain people acting on the decision to move in larger numbers when previous decreases did not produce similar results in prior periods. So while a decreased mortgage rate may have contributed to peoples' willingness to move, it is unlikely to be to motivating factor.
+
+It is important to note that month 39 corresponds to many states' lockdowns, as well as larger nationwide concern about the ability for people to make mortgage payments in the face of the pandemic. It could be the case that calockdown is absorbing this and thus shows discontinuity in the mortgage rate at the cutoff.
+
+### Ratio of Average Home Sales Prices (Montana/California)
+
+```{r cars16, echo=FALSE}
+rdplot(Montana$b_h_ratio, Montana$month, p = 3, c = 39, y.label = 'Housing Sale Price Ratio',  x.label = 'Month', kernel = "triangular")
+```
+
+Looking at the trendlines before and after the cutoff, it appears that the two are nearly touching at the cutoff point. While the trajectory of the lines differs, this suggest that the housing ratio is balanced at the cutoff.
+
+### Gas Ratio
+
+Using rdplot to look at the trendlines in the ratio of the average prices of a gallon of gas in California versus a gallon of gas in Montana shows the following:
+
+```{r cars13, echo=FALSE}
+rdplot(Montana$gas_r, Montana$month, p = 4, c = 39, y.label = 'Gas Ratio',  x.label = 'Month', kernel = "triangular")
+```
+
+This shows that there is discontinuity at the cutoff point; however, this is likely to reflect the uncertainty COVID has brought the nation (more variation in the trendline post cutoff compared to a more smooth trendline prior). Though this could present a problem for the use of RDD, this is likely to reflective of a nationwide phenomenon in the ratio of gas prices between higher cost states and lower cost ones, so it is unlikely that this fueled migration specific to Montana.
+
+### Wage Ratio
+
+Looking at the ratio of minimum wages between California and Montana:
+
+```{r cars14, echo=FALSE}
+rdplot(Montana$wage_r, Montana$month, p = 4, c = 39, y.label = 'Ratio of Minimum Wage (CA/MT)',  x.label = 'Month', kernel = "triangular")
+```
+
+There is indeed a discontinuity at the cutoff; however, it is important to note that California experienced 2 minimum wages during the relevant period, while Montana increases its minimum wage annually starting on January 1st of each year. While it is the case that the ratio is the same for January and February as it is for March and the rest of 2020, it could be the case that there was a lag in the impact of the ratio differential that could lead to an acceleration of movement to Montana. While this is not likely, it is possible and cannot be discounted as a potential contributing factor to the net immigration from California to Montana.
+
+# Using Regression Discontinuity
+
+## Total Monthly California Immigrants to Montana 2017 to Now
+
+With the balancing of the model's covariates checked, regression discontinuity can be used to determine if there are differentials in the trend lines before and after the cutoff (month 39).  
+
+```{r cars4, echo=FALSE}
+rdplot(Montana$caimm, Montana$month, p = 4, c = 39, y.label = 'Total Monthly California Immigrants to Montana',  x.label = 'Month', kernel = "triangular")
+```
+
+Looking at month 39 when the California lockdown was announced, a clear jump and separate trendline for the number of monthly net immigrants to Montana can be seen. The upward jump at the cutoff is consistent with the positive coefficient for "calockdown" in the original regression, and suggests that the COVID lockdown did lead to a spike in the net migration from California to Montana.
+
+## Change in California Immigrants Over Time
+
+Looking instead at the month-to-month change of net immigrants to Montana shows the following:
+
+```{r cars6, echo=FALSE}
+rdplot(Montana$change_caimm, Montana$month, p = 3, c = 39, y.label = 'Change in Monthly Immitgrants From California',  x.label = 'Month', kernel = "triangular")
+```
+
+It can be seen in the graph above that at the cutoff point of March 2020 there is discontinuity in the trend for the month-to-month change in the number of net migrants from California to Montana. This supports the findings in the previous graph and suggests that the COVID lockdown in California did impact the rate of migration to Montana from California.
+
+# Conclusion
+
+Based on my analysis, and noting that there was no significant change in covariates utilized in the model around the cutoff point, there appears to be an increase in the net immigrants from California to Montana as the result of the lockdowns in California. Given the parabolic shape of the trend after the cutoff, I believe that people who were debating on making the move or not decided to move once the lockdowns were announced. Shortly thereafter it is likely that the rate of net immigrants fell due to the death totals not being as drastic as initially forecasted, with the rate of net immigration trending upward after Gavin Newsom announced the extended lockdown period. 
+
+While there are many factors related to COVID that could have become more relevant as the lockdowns extended, there is not enough available data to conclusively determine what else could be driving this increase in net migration to Montana. Some other factors that should be included once data become available include:
+
+1. Crime differentials between areas that people are leaving and Montana. Since the most recent figures are not available at this time, these will need to be explored at a later date.
+
+2. The demographic information of the people migrating to Montana. It could be the case that the increase is fueled by younger couples looking to start or raise young families in more rural areas and see Montana as an appealing location compared to more crowded areas in California. Similarly, it could be that the people moving to Montana became able to work remote in the first quarter of 2020, and are looking to cut their living expenses in order to increase their financial position. Until more data becomes available these factors cannot be considered as being causal motivators.
+
+3. Economic drivers such as industries/companies that have large employment bases in California moving to Montana. If a major company based in California decided to relocate to Montana during the first quarter of 2020 it could be the case that many Californian moved as well as a condition of continued employment.
+
+# Project Shortcomings
+
+## General
+
+1. The number of data points pre-cutoff (Prior to March 2020) greatly outnumber the number of data points from March 2020 to March 2021. Getting weekly data on many of the covariates used is far more difficult, and ideally weekly data for the model's covariates as well as net immigration from other states would be used for a more accurate determination.
+
+2. There is also the issue of Montana being a non-disclosure state, meaning data for the number of out of state buyers to in-state buyers is not available.
+
+3. There is also the issue of having to use minimum wage data as opposed to median household income. Since more recent data is not available the better variable choice cannot be used.
+
+4. Finally, I would have liked to use property crimes as a variable by utilizing FBI crime statistics, but the post cut-off figures have yet to be published.
+
+# References
+
+1. News, K. (2020, June 26). Real estate agents say more people are moving to Montana to avoid COVID-19. Retrieved April 12, 2021, from https://www.krtv.com/news/montana-and-regional-news/real-estate-agents-say-more-people-are-moving-to-montana-to-avoid-covid-19
+
+2. Luna, T. (2021, March 19). Inside Gavin Newsom's fateful decision to lock down California. Retrieved April 12, 2021, from https://www.latimes.com/california/story/2021-03-19/one-year-anniversary-newsom-sweeping-covid-19-lockdown-stay-at-home-order
+
+3. Temperature averages CROP YEAR. (n.d.). Retrieved April 12, 2021, from https://agresearch.montana.edu/nwarc/weather/AvTempCY.html
+
+4. Precipitation by month &amp; year on a calendar year basis. (n.d.). Retrieved April 12, 2021, from https://agresearch.montana.edu/nwarc/weather/PrecipSumClndYr.html
+
+5. Zillow.com. (n.d.). Retrieved April 7, 2021, from https://www.zillow.com/mt/home-values/
+
+6. Zillow.com. (n.d.). Retrieved April 7, 2021, from https://www.zillow.com/ca/home-values/
+
+7. Lumber1978-2021 Data [Chart]. (n.d.). In TradingEconomics. Retrieved April 23, 2021, from https://tradingeconomics.com/commodity/lumber
+
+8. U.S. Census Bureau (2021). State-to-State Migration Flows. Retrieved from https://www.census.gov/data/tables/time-series/demo/geographic-mobility/state-to-state-migration.html
+
+9. Gas Price Charts [Chart]. (n.d.). In GasBuddy. Retrieved April 22, 2021, from https://www.gasbuddy.com/charts
+
+10. U.S. Census Bureau, New Private Housing Units Authorized by Building Permits: 1-Unit Structures for Montana [MTBP1FH], 
+retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/MTBP1FH, March 28, 2021.
+
+11. Employment relations Division. (n.d.). Retrieved April 19, 2021, from https://erd.dli.mt.gov/labor-standards/wage-and-hour-payment-act/minimum-wage-history
+
+12. Dir. (n.d.). History of California minimum wage. Retrieved April 18, 2021, from https://www.dir.ca.gov/iwc/minimumwagehistory.htm
+
+13. 30-Year fixed-rate mortgages since 1971. (n.d.). Retrieved April 16, 2021, from http://www.freddiemac.com/pmms/pmms30.html
+
+14. Covid Case Totals in California. (n.d.). Retrieved April 18, 2021, from https://www.worldometers.info/coronavirus/usa/california/
+

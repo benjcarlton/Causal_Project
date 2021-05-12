@@ -1,0 +1,33 @@
+Baseline Model:
+
+```{r reg, echo=FALSE}
+baseline <- lm(caimm ~ ahv + dlumber + permits + s_h_ratio + gas_r + mort + temp + percip + calockdown + cacovid, data = Montana)
+
+stargazer(baseline,
+  title="Covariates Forecasted Effect on Immigrants From California",
+  notes.label="Significance Levels",
+  type = "text"
+  )
+```
+
+Covariate Balance (2 models side by side):
+
+```{r model1, echo=FALSE}
+modela <- lm(dlumber ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+modeld <- lm(permits ~ caimm + ahv + s_h_ratio + gas_r + mort + s_h_ratio + calockdown + cacovid, data = Montana)
+
+stargazer(modela, modeld,
+  title="Covariate Balance",
+  dep.var.caption ="Change in Lumber Futures, Private Permits Issued",
+  notes.label="Significance Levels",
+  type = "text"
+  )
+```
+
+Regression Discontinuity:
+
+```{r rdd7, echo=FALSE}
+rdplot(Montana$ahv, Montana$month, p = 3, c = 39, y.label = 'Average Home Sale Price in Montana',  x.label = 'Month', kernel = "triangular")
+```
+
